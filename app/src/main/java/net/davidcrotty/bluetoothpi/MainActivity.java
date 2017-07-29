@@ -4,12 +4,15 @@ import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.AdvertiseData;
+import android.bluetooth.le.AdvertiseSettings;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.ParcelUuid;
 import android.os.StrictMode;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -17,9 +20,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
+
+import java.nio.charset.Charset;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -29,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private final int ENABLE_LOCATION_REQUEST = 2;
     private BluetoothAdapter bluetoothAdapter;
     private LEScanCallback scanCallback;
+    private GATTServerCallback gattServerCallback;
     private HandlerThread scanThread;
     private boolean isScanning;
     private ActivityMainBinding binding;
@@ -57,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         BluetoothManager manager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
         scanCallback = new LEScanCallback();
+        gattServerCallback = new GATTServerCallback();
 
         scanThread = new HandlerThread(BLUETOOTH_SCAN_THREAD);
         scanThread.start();
@@ -66,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCoarseLocationRuntimePermission();
-            view.setTag(R.id.TAG_ENABLE_BT_SCAN, true);
+            view.setTag(R.id.TAG_BT_ACTION, true);
             return;
         }
         if(bluetoothEnabled()) {
@@ -80,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             binding.scanToggle.setChecked(false);
+            view.setTag(R.id.TAG_BT_ACTION, true);
             promptBluetoothEnableDialog();
         }
     }
@@ -107,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
         if(requestCode == ENABLE_BLUETOOTH_REQUEST) {
             switch (resultCode) {
                 case Activity.RESULT_OK:
-                    binding.scanToggle.performClick();
+                    retryToggleAction();
                     break;
                 default:
             }
@@ -120,16 +128,22 @@ public class MainActivity extends AppCompatActivity {
         if(grantResults.length != 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-            View target = null;
-            if(binding.scanToggle.getTag(R.id.TAG_ENABLE_BT_SCAN) != null) {
-                target = binding.scanToggle;
-            } else {
-                target = binding.advertiseToggle;
-            }
-            ((ToggleButton) target).setChecked(true);
-            target.setSelected(true);
-            checkedChangedListener(target, true);
+            retryToggleAction();
         }
+    }
+
+    private void retryToggleAction() {
+        View target = null;
+        boolean scanToggle = binding.scanToggle.getTag(R.id.TAG_BT_ACTION) == null ? false : (boolean) binding.scanToggle.getTag(R.id.TAG_BT_ACTION);
+        boolean advertiseToggle = binding.advertiseToggle.getTag(R.id.TAG_BT_ACTION) == null ? false : (boolean) binding.advertiseToggle.getTag(R.id.TAG_BT_ACTION);
+        if(scanToggle) {
+            target = binding.scanToggle;
+            binding.scanToggle.setTag(R.id.TAG_BT_ACTION, false);
+        } else if (advertiseToggle){
+            target = binding.advertiseToggle;
+            binding.advertiseToggle.setTag(R.id.TAG_BT_ACTION, false);
+        }
+        target.performClick();
     }
 
     private void promptBluetoothEnableDialog() {
@@ -139,7 +153,29 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleAdvertise(boolean shouldAdvertise) {
         if(shouldAdvertise) {
+            if(bluetoothEnabled()) {
+                AdvertiseSettings settings = new AdvertiseSettings.Builder()
+                        .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
+                        .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
+                        .setConnectable( false )
+                        .build();
 
+                ParcelUuid pUuid = new ParcelUuid(UUID.fromString("693dcee5-43a8-4485-8ec7-b99fc62cbcaa"));
+
+                AdvertiseData data = new AdvertiseData.Builder()
+                        .setIncludeDeviceName(false) //setting to true breaks LE 31 byte limit
+                        .addServiceUuid( pUuid )
+                        .addServiceData( pUuid, new byte[]{1} )
+                        .build();
+
+                bluetoothAdapter.getBluetoothLeAdvertiser().startAdvertising(settings,
+                        data,
+                        gattServerCallback);
+            }
+        } else {
+            if(bluetoothEnabled()) {
+                bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(gattServerCallback);
+            }
         }
     }
 
@@ -171,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             if(isScanning == false) return;
             bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
+            bluetoothAdapter.disable();
             isScanning = false;
         }
     }

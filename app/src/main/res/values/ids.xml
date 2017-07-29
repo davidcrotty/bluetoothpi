@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="TAG_ENABLE_BT_SCAN" type="id"/>
+    <item name="TAG_BT_ACTION" type="id"/>
 </resources>
