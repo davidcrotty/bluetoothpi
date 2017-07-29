@@ -20,6 +20,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
 
@@ -127,7 +128,6 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(grantResults.length != 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
             retryToggleAction();
         }
     }
@@ -143,7 +143,9 @@ public class MainActivity extends AppCompatActivity {
             target = binding.advertiseToggle;
             binding.advertiseToggle.setTag(R.id.TAG_BT_ACTION, false);
         }
-        target.performClick();
+        ((ToggleButton) target).setChecked(true);
+        target.setSelected(true);
+        checkedChangedListener(target, true);
     }
 
     private void promptBluetoothEnableDialog() {
@@ -174,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             if(bluetoothEnabled()) {
+                //TODO Nexus 7 [2012] 6 throws NPE, is there another check to see if LE is supported?
                 bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(gattServerCallback);
             }
         }
