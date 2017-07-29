@@ -2,11 +2,13 @@ package net.davidcrotty.bluetoothpi;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.DialogInterface;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.StrictMode;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -21,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private LEScanCallback scanCallback;
     private HandlerThread scanThread;
     private boolean isScanning;
+    private ActivityMainBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
                     .build());
         }
 
-        ActivityMainBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         binding.setHandler(this);
         BluetoothManager manager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
@@ -52,7 +55,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void checkedChangedListener(View view, boolean checked) {
-        toggleScan(checked);
+        if(bluetoothAdapter.isEnabled()) {
+            toggleScan(checked);
+        } else {
+            binding.scanToggle.setChecked(false);
+            promptBluetoothEnableDialog();
+        }
+    }
+
+    private void promptBluetoothEnableDialog() {
+        new AlertDialog.Builder(this).setTitle(getResources().getString(R.string.dialog_title))
+            .setMessage(getResources().getString(R.string.dialog_text))
+            .setPositiveButton(getResources().getString(R.string.dialog_positive), null)
+            .create()
+            .show();
     }
 
     private void toggleScan(boolean shouldScan) {

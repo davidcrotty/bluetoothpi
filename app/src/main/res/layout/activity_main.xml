@@ -13,6 +13,7 @@
         android:layout_height="match_parent">
 
         <ToggleButton
+            android:id="@+id/scan_toggle"
             app:layout_constraintLeft_toRightOf="parent"
             app:layout_constraintRight_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="parent"
