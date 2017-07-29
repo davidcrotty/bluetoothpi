@@ -20,6 +20,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
@@ -83,7 +84,14 @@ public class MainActivity extends AppCompatActivity {
                     toggleScan(checked);
                     break;
                 case R.id.advertise_toggle:
-                    toggleAdvertise(checked);
+                    if(bluetoothGATTServerEnabled()) {
+                        toggleAdvertise(checked);
+                    } else {
+                        binding.advertiseToggle.performClick();
+                        binding.advertiseToggle.setEnabled(false);
+                        Toast.makeText(this, "Whoops looks like this device does not support" +
+                                "Bluetooth LE advertising", Toast.LENGTH_SHORT).show();
+                    }
                     break;
             }
         } else {
@@ -155,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleAdvertise(boolean shouldAdvertise) {
         if(shouldAdvertise) {
-            if(bluetoothEnabled()) {
                 AdvertiseSettings settings = new AdvertiseSettings.Builder()
                         .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
                         .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
@@ -173,12 +180,8 @@ public class MainActivity extends AppCompatActivity {
                 bluetoothAdapter.getBluetoothLeAdvertiser().startAdvertising(settings,
                         data,
                         gattServerCallback);
-            }
         } else {
-            if(bluetoothEnabled()) {
-                //TODO Nexus 7 [2012] 6 throws NPE, is there another check to see if LE is supported?
-                bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(gattServerCallback);
-            }
+            bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(gattServerCallback);
         }
     }
 
@@ -218,5 +221,23 @@ public class MainActivity extends AppCompatActivity {
     private boolean bluetoothEnabled() {
         if(bluetoothAdapter == null) return false;
         return bluetoothAdapter.isEnabled();
+    }
+
+    /**
+     * Appears isEnabled is not enough, bluetoothAdapter can still through an NPE
+     * when getting the LE Advertiser. This check performs the same as getBluetoothLeAdvertiser()
+     * without throwing the NPE.
+     *
+     * @return
+     */
+    private boolean bluetoothGATTServerEnabled() {
+        if(bluetoothAdapter == null) return false;
+        if(bluetoothAdapter.isEnabled()) {
+          if(bluetoothAdapter.isMultipleAdvertisementSupported())   {
+              return true;
+          }
+        }
+
+        return false;
     }
 }
