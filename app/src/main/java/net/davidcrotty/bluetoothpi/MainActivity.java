@@ -13,6 +13,7 @@ import android.os.HandlerThread;
 import android.os.StrictMode;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -62,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void checkedChangedListener(View view, boolean checked) {
-        if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCoarseLocationRuntimePermission();
             view.setTag(R.id.TAG_ENABLE_BT_SCAN, true);
@@ -126,7 +127,8 @@ public class MainActivity extends AppCompatActivity {
                 target = binding.advertiseToggle;
             }
             ((ToggleButton) target).setChecked(true);
-            target.performClick();
+            target.setSelected(true);
+            checkedChangedListener(target, true);
         }
     }
 
