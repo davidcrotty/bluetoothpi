@@ -16,6 +16,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
 
@@ -64,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCoarseLocationRuntimePermission();
+            view.setTag(R.id.TAG_ENABLE_BT_SCAN, true);
             return;
         }
         if(bluetoothEnabled()) {
@@ -116,7 +118,15 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(grantResults.length != 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            binding.scanToggle.performClick();
+
+            View target = null;
+            if(binding.scanToggle.getTag(R.id.TAG_ENABLE_BT_SCAN) != null) {
+                target = binding.scanToggle;
+            } else {
+                target = binding.advertiseToggle;
+            }
+            ((ToggleButton) target).setChecked(true);
+            target.performClick();
         }
     }
 
