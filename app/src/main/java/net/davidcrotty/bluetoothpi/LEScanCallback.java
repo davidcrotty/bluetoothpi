@@ -32,6 +32,7 @@ public class LEScanCallback extends ScanCallback {
             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                 super.onConnectionStateChange(gatt, status, newState);
                 Timber.d("NAME " + gatt.getDevice().getName() + " MAC:" + gatt.getDevice().getAddress());
+
                 if(newState == BluetoothProfile.STATE_CONNECTED) {
                     Timber.d("STATE_CONNECTED");
                     gatt.discoverServices();

@@ -8,7 +8,6 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
-import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
@@ -222,13 +221,15 @@ public class MainActivity extends AppCompatActivity {
 
                     List<ScanFilter> filters = new ArrayList<ScanFilter>();
 
+                    ParcelUuid mask = ParcelUuid.fromString("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
+
                     ScanFilter filter = new ScanFilter.Builder()
-                            .setServiceUuid( new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)))
+                            .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)), mask)
                             .build();
                     filters.add(filter);
 
                     ScanSettings settings = new ScanSettings.Builder()
-                            .setScanMode( ScanSettings.SCAN_MODE_LOW_LATENCY )
+                            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                             .build();
 
                     bluetoothAdapter.getBluetoothLeScanner().startScan(scanCallback);
@@ -238,7 +239,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     if(bluetoothEnabled() == false) return;
-//                    bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
+                    bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -251,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
             isScanning = true;
         } else {
             if(isScanning == false) return;
-//            bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
+            bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
             bluetoothAdapter.disable();
             isScanning = false;
         }
