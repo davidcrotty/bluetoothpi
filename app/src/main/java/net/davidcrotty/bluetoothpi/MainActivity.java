@@ -37,7 +37,7 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
 
     private final String BLUETOOTH_SCAN_THREAD = "BLUETOOTH_SCAN_THREAD";
-    private final int SCAN_DURATION_MS = 10000;
+    private final int SCAN_DURATION_MS = 20000;
     private final int ENABLE_BLUETOOTH_REQUEST = 1;
     private final int ENABLE_LOCATION_REQUEST = 2;
     private BluetoothAdapter bluetoothAdapter;
@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     if(bluetoothEnabled() == false) return;
-                    bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
+//                    bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -251,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
             isScanning = true;
         } else {
             if(isScanning == false) return;
-            bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
+//            bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
             bluetoothAdapter.disable();
             isScanning = false;
         }
