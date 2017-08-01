@@ -3,9 +3,14 @@ package net.davidcrotty.bluetoothpi;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothGattServer;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
+import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
@@ -25,7 +30,8 @@ import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
 
-import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,8 +41,11 @@ public class MainActivity extends AppCompatActivity {
     private final int ENABLE_BLUETOOTH_REQUEST = 1;
     private final int ENABLE_LOCATION_REQUEST = 2;
     private BluetoothAdapter bluetoothAdapter;
+    private BluetoothManager bluetoothManager;
     private LEScanCallback scanCallback;
     private GATTServerCallback gattServerCallback;
+    private BluetoothGattServer gattServer;
+    private BluetoothAdvertiseCallback advertiseCallback;
     private HandlerThread scanThread;
     private boolean isScanning;
     private ActivityMainBinding binding;
@@ -62,9 +71,9 @@ public class MainActivity extends AppCompatActivity {
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         binding.setHandler(this);
-        BluetoothManager manager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
-        bluetoothAdapter = manager.getAdapter();
-        scanCallback = new LEScanCallback();
+        bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        scanCallback = new LEScanCallback(this);
         gattServerCallback = new GATTServerCallback();
 
         scanThread = new HandlerThread(BLUETOOTH_SCAN_THREAD);
@@ -99,6 +108,12 @@ public class MainActivity extends AppCompatActivity {
             view.setTag(R.id.TAG_BT_ACTION, true);
             promptBluetoothEnableDialog();
         }
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        closeGattServer();
     }
 
     private void requestCoarseLocationRuntimePermission() {
@@ -163,25 +178,37 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleAdvertise(boolean shouldAdvertise) {
         if(shouldAdvertise) {
-                AdvertiseSettings settings = new AdvertiseSettings.Builder()
-                        .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
-                        .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
-                        .setConnectable( false )
-                        .build();
+            GATTServerCallback serverCallback = new GATTServerCallback();
+            gattServer = bluetoothManager.openGattServer(this.getApplicationContext(), serverCallback);
+            BluetoothGattService service = new BluetoothGattService(UUID.fromString(BuildConfig.DEVICE_UUID),
+                    BluetoothGattService.SERVICE_TYPE_PRIMARY);
+            gattServer.addService(service);
+            AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+                AdvertiseSettings settings = settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
+                .setTimeout(0)
+                .build();
 
-                ParcelUuid pUuid = new ParcelUuid(UUID.fromString("693dcee5-43a8-4485-8ec7-b99fc62cbcaa"));
+                ParcelUuid pUuid = ParcelUuid.fromString(BuildConfig.DEVICE_UUID);
 
                 AdvertiseData data = new AdvertiseData.Builder()
-                        .setIncludeDeviceName(false) //setting to true breaks LE 31 byte limit
+                        .setIncludeDeviceName(true) //setting to true breaks LE 31 byte limit
                         .addServiceUuid( pUuid )
-                        .addServiceData( pUuid, new byte[]{1} )
                         .build();
+
+                advertiseCallback = new BluetoothAdvertiseCallback();
 
                 bluetoothAdapter.getBluetoothLeAdvertiser().startAdvertising(settings,
                         data,
-                        gattServerCallback);
+                        advertiseCallback);
         } else {
-            bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(gattServerCallback);
+            closeGattServer();
+            bluetoothAdapter.getBluetoothLeAdvertiser().stopAdvertising(advertiseCallback);
+        }
+    }
+
+    private void closeGattServer() {
+        if(gattServer != null) {
+            gattServer.close();
         }
     }
 
@@ -189,6 +216,24 @@ public class MainActivity extends AppCompatActivity {
         if(shouldScan) {
             if(isScanning) return;
             Handler scanHandler = new Handler(scanThread.getLooper());
+            scanHandler.post(new Runnable() {
+                @Override
+                public void run() {
+
+                    List<ScanFilter> filters = new ArrayList<ScanFilter>();
+
+                    ScanFilter filter = new ScanFilter.Builder()
+                            .setServiceUuid( new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)))
+                            .build();
+                    filters.add(filter);
+
+                    ScanSettings settings = new ScanSettings.Builder()
+                            .setScanMode( ScanSettings.SCAN_MODE_LOW_LATENCY )
+                            .build();
+
+                    bluetoothAdapter.getBluetoothLeScanner().startScan(scanCallback);
+                }
+            });
             scanHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -203,12 +248,6 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             }, SCAN_DURATION_MS);
-            scanHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    bluetoothAdapter.getBluetoothLeScanner().startScan(scanCallback);
-                }
-            });
             isScanning = true;
         } else {
             if(isScanning == false) return;

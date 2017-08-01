@@ -9,6 +9,8 @@ android {
         targetSdkVersion 25
         versionCode 1
         versionName "1.0"
+
+        buildConfigField "String", "DEVICE_UUID", "\"693dcee5-43a8-4485-8ec7-b99fc62cbcaa\""
     }
     buildTypes {
         release {

@@ -1,5 +1,6 @@
 package net.davidcrotty.bluetoothpi;
 
+import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseSettings;
 
@@ -11,16 +12,6 @@ import timber.log.Timber;
  * Copyright © 2017 David Crotty - All Rights Reserved
  */
 
-public class GATTServerCallback extends AdvertiseCallback {
-    @Override
-    public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-        super.onStartSuccess(settingsInEffect);
-        Timber.d("onStartSuccess");
-    }
+public class GATTServerCallback extends BluetoothGattServerCallback {
 
-    @Override
-    public void onStartFailure(int errorCode) {
-        super.onStartFailure(errorCode);
-        Timber.d("onStartFailure " + errorCode);
-    }
 }
