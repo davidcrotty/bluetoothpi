@@ -79,7 +79,20 @@ public class MainActivity extends AppCompatActivity {
         scanThread.start();
     }
 
+    private void promptBluetoothFeatureNotSupported() {
+        binding.advertiseToggle.performClick();
+        binding.advertiseToggle.setEnabled(false);
+        Toast.makeText(this, "Whoops looks like this device does not support" +
+                "Bluetooth LE advertising", Toast.LENGTH_SHORT).show();
+    }
+
+
     public void checkedChangedListener(View view, boolean checked) {
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            promptBluetoothFeatureNotSupported();
+            return;
+        }
+
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCoarseLocationRuntimePermission();
@@ -95,10 +108,7 @@ public class MainActivity extends AppCompatActivity {
                     if(bluetoothGATTServerEnabled()) {
                         toggleAdvertise(checked);
                     } else {
-                        binding.advertiseToggle.performClick();
-                        binding.advertiseToggle.setEnabled(false);
-                        Toast.makeText(this, "Whoops looks like this device does not support" +
-                                "Bluetooth LE advertising", Toast.LENGTH_SHORT).show();
+                        promptBluetoothFeatureNotSupported();
                     }
                     break;
             }
@@ -221,7 +231,8 @@ public class MainActivity extends AppCompatActivity {
 
                     List<ScanFilter> filters = new ArrayList<ScanFilter>();
 
-                    ParcelUuid mask = ParcelUuid.fromString("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
+                    //Binary and with UUID to decipher which devices will be searched for, useful for manufacturer specific products
+                    ParcelUuid mask = ParcelUuid.fromString(BuildConfig.DEVICE_MASK);
 
                     ScanFilter filter = new ScanFilter.Builder()
                             .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)), mask)
