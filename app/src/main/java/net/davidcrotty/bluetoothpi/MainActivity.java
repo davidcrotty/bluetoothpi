@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LEScanCallback.ServiceLocatedListener {
 
     private final String BLUETOOTH_SCAN_THREAD = "BLUETOOTH_SCAN_THREAD";
     private final int SCAN_DURATION_MS = 20000;
@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothGattServer gattServer;
     private BluetoothAdvertiseCallback advertiseCallback;
     private HandlerThread scanThread;
+    private Handler scanHandler;
     private boolean isScanning;
     private ActivityMainBinding binding;
 
@@ -73,11 +74,12 @@ public class MainActivity extends AppCompatActivity {
         binding.setHandler(this);
         bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
-        scanCallback = new LEScanCallback(this, new GATTClientCallback(this));
+        scanCallback = new LEScanCallback(this, new GATTClientCallback(this), this);
         gattServerCallback = new GATTServerCallback();
 
         scanThread = new HandlerThread(BLUETOOTH_SCAN_THREAD);
         scanThread.start();
+        scanHandler = new Handler(scanThread.getLooper());
     }
 
     private void promptBluetoothFeatureNotSupported() {
@@ -226,7 +228,6 @@ public class MainActivity extends AppCompatActivity {
     private void toggleScan(boolean shouldScan) {
         if(shouldScan) {
             if(isScanning) return;
-            Handler scanHandler = new Handler(scanThread.getLooper());
             scanHandler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -251,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
             scanHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
+                    //This will DEACTIVATE BT, destroying a gatt session if desired services are available
                     if(bluetoothEnabled() == false) return;
                     bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
                     runOnUiThread(new Runnable() {
@@ -292,5 +294,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return false;
+    }
+
+    @Override
+    public void onLocated() {
+        scanHandler.removeCallbacksAndMessages(null);
     }
 }
