@@ -21,6 +21,6 @@ public class BluetoothAdvertiseCallback extends AdvertiseCallback {
     @Override
     public void onStartFailure(int errorCode) {
         super.onStartFailure(errorCode);
-        Timber.d("onStartFailure");
+        Timber.d("onStartFailure " + errorCode);
     }
 }

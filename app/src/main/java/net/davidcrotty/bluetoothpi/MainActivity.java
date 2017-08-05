@@ -29,6 +29,7 @@ import android.widget.ToggleButton;
 
 import net.davidcrotty.bluetoothpi.databinding.ActivityMainBinding;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         binding.setHandler(this);
         bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
-        scanCallback = new LEScanCallback(this);
+        scanCallback = new LEScanCallback(this, new GATTClientCallback(this));
         gattServerCallback = new GATTServerCallback();
 
         scanThread = new HandlerThread(BLUETOOTH_SCAN_THREAD);
@@ -200,7 +201,8 @@ public class MainActivity extends AppCompatActivity {
                 ParcelUuid pUuid = ParcelUuid.fromString(BuildConfig.DEVICE_UUID);
 
                 AdvertiseData data = new AdvertiseData.Builder()
-                        .setIncludeDeviceName(true) //setting to true breaks LE 31 byte limit
+                        .setIncludeDeviceName(false) //setting to true breaks LE 31 byte limit
+                        .addManufacturerData(0x0536, new byte[]{0x05, 0x36, 0x43, 0x4b, 0x45, 0x54})
                         .addServiceUuid( pUuid )
                         .build();
 
@@ -229,13 +231,13 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
 
-                    List<ScanFilter> filters = new ArrayList<ScanFilter>();
-
-                    //Binary and with UUID to decipher which devices will be searched for, useful for manufacturer specific products
-                    ParcelUuid mask = ParcelUuid.fromString(BuildConfig.DEVICE_MASK);
+                    List<ScanFilter> filters = new ArrayList();
 
                     ScanFilter filter = new ScanFilter.Builder()
-                            .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)), mask)
+                            .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)))
+                            .setManufacturerData(0x0536,
+                                    new byte[]{0x05, 0x36, 0x43, 0x4b, 0x45, 0x54},
+                                    new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff})
                             .build();
                     filters.add(filter);
 
@@ -243,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
                             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                             .build();
 
-                    bluetoothAdapter.getBluetoothLeScanner().startScan(scanCallback);
+                    bluetoothAdapter.getBluetoothLeScanner().startScan(filters, settings, scanCallback);
                 }
             });
             scanHandler.postDelayed(new Runnable() {
