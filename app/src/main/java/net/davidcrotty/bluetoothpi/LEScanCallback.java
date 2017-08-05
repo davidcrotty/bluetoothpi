@@ -6,8 +6,12 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
+import android.os.ParcelUuid;
+
+import java.util.List;
 
 import timber.log.Timber;
 
@@ -30,32 +34,15 @@ public class LEScanCallback extends ScanCallback {
     @Override
     public void onScanResult(int callbackType, ScanResult result) {
         super.onScanResult(callbackType, result);
-        result.getDevice().connectGatt(context, false, new BluetoothGattCallback() {
-            @Override
-            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                super.onConnectionStateChange(gatt, status, newState);
-                BluetoothDevice device = gatt.getDevice();
-                Timber.d("MAC:" + device.getAddress());
-
-                if(newState == BluetoothProfile.STATE_CONNECTED) {
-                    Timber.d("STATE_CONNECTED");
-//                    gatt.discoverServices();
-                } else if(newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Timber.d("STATE_DISCONNECTED");
-                    device.getUuids(); //TODO this way seems less complex
-//                    device.connectGatt(context, false, callback);
-                }
+//        BluetoothDevice device = result.getDevice();
+        Timber.d("Device Found");
+//        boolean fetchedUUIDS = device.fetchUuidsWithSdp(); //TODO this way seems less complex
+        ScanRecord record = result.getScanRecord();
+        if(record != null) {
+            List<ParcelUuid> serviceList = record.getServiceUuids();
+            for(ParcelUuid service : serviceList) {
+                Timber.d("Service found: " + service.getUuid().toString());
             }
-
-            @Override
-            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                super.onServicesDiscovered(gatt, status);
-            }
-
-            @Override
-            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                super.onCharacteristicRead(gatt, characteristic, status);
-            }
-        });
+        }
     }
 }
