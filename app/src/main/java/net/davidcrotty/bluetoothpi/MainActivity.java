@@ -3,6 +3,8 @@ package net.davidcrotty.bluetoothpi;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
@@ -34,10 +36,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static android.bluetooth.BluetoothGattCharacteristic.PERMISSION_READ;
+import static android.bluetooth.BluetoothGattCharacteristic.PERMISSION_WRITE;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_NOTIFY;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ;
+
 public class MainActivity extends AppCompatActivity implements LEScanCallback.ServiceLocatedListener {
 
     private final String BLUETOOTH_SCAN_THREAD = "BLUETOOTH_SCAN_THREAD";
-    private final int SCAN_DURATION_MS = 20000;
+    private final int SCAN_DURATION_MS = 60000;
     private final int ENABLE_BLUETOOTH_REQUEST = 1;
     private final int ENABLE_LOCATION_REQUEST = 2;
     private BluetoothAdapter bluetoothAdapter;
@@ -192,15 +199,26 @@ public class MainActivity extends AppCompatActivity implements LEScanCallback.Se
         if(shouldAdvertise) {
             GATTServerCallback serverCallback = new GATTServerCallback();
             gattServer = bluetoothManager.openGattServer(this.getApplicationContext(), serverCallback);
-            BluetoothGattService service = new BluetoothGattService(UUID.fromString(BuildConfig.DEVICE_UUID),
+            BluetoothGattService service = new BluetoothGattService(UUID.fromString(BuildConfig.SERVICE_UUID),
                     BluetoothGattService.SERVICE_TYPE_PRIMARY);
+
+            BluetoothGattCharacteristic characteristic =
+                    new BluetoothGattCharacteristic(UUID.fromString(BuildConfig.CHARACTERISTIC_UUID),
+                            PROPERTY_READ | PROPERTY_NOTIFY,
+                            PERMISSION_READ | PERMISSION_WRITE);
+            BluetoothGattDescriptor descriptor =
+                    new BluetoothGattDescriptor(UUID.fromString(BuildConfig.DESCRIPTOR_UUID),
+                            PERMISSION_READ | PERMISSION_WRITE);
+            characteristic.addDescriptor(descriptor);
+            service.addCharacteristic(characteristic);
+
             gattServer.addService(service);
             AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
                 AdvertiseSettings settings = settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
                 .setTimeout(0)
                 .build();
 
-                ParcelUuid pUuid = ParcelUuid.fromString(BuildConfig.DEVICE_UUID);
+                ParcelUuid pUuid = ParcelUuid.fromString(BuildConfig.SERVICE_UUID);
 
                 AdvertiseData data = new AdvertiseData.Builder()
                         .setIncludeDeviceName(false) //setting to true breaks LE 31 byte limit
@@ -235,7 +253,7 @@ public class MainActivity extends AppCompatActivity implements LEScanCallback.Se
                     List<ScanFilter> filters = new ArrayList();
 
                     ScanFilter filter = new ScanFilter.Builder()
-                            .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.DEVICE_UUID)))
+                            .setServiceUuid(new ParcelUuid(UUID.fromString(BuildConfig.SERVICE_UUID)))
                             .setManufacturerData(0x0536,
                                     new byte[]{0x05, 0x36, 0x43, 0x4b, 0x45, 0x54},
                                     new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff})
